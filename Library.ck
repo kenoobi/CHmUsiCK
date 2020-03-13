@@ -3,7 +3,7 @@
 //  CHmUsiCK
 //
 //  Created by Esteban Betancur on 25/06/15.
-//  
+//
 //
 
 //Library
@@ -16,6 +16,7 @@ Machine.add(me.dir() + "/Library/SyncClass.ck");
 Machine.add(me.dir() + "/Library/HarmonyClass.ck");
 Machine.add(me.dir() + "/Library/Pan.ck");
 Machine.add(me.dir() + "/Library/Deelay.ck");
+Machine.add(me.dir() + "/Library/Axiom.ck"); // Just for Machina
 // Synths
 Machine.add(me.dir() + "/Library/Synths/TheCooker.ck");
 Machine.add(me.dir() + "/Library/Synths/Synthfrog.ck");

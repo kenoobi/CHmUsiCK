@@ -19,15 +19,11 @@ public class Chmusick extends Chubgraph {
     private dur convert(float beat)
     // ftod - beat(float) convertion to dur
     {
-        Std.fabs(beat) => beat;
-
-        60/beat => float tempo;
+        60.0/beat => float tempo;
         return tempo::second;
     }
     private dur Dur(float beat, int div)
     {
-        Std.abs(div) => div;
-
         (div / 4.0) => float factor;
         (convert(beat) / factor) => dur tempo;
         return tempo;
@@ -59,6 +55,24 @@ public class Chmusick extends Chubgraph {
             Math.random2(0,1) => random[i];
         }
         return random;
+    }
+    public int toNote(int note)
+    {
+        maybe => int trig;
+        if(trig == 1)
+          return note;
+    }
+    public int[] trigToNote(int pattern[] ,int note)
+    {
+        int toReturn[pattern.cap()];
+
+        for(0 => int i; i < toReturn.cap(); i ++)
+        {
+            if(pattern[i] == 1){
+              note => toReturn[i];
+            }
+        }
+        return toReturn;
     }
     public int[] subArray(int pattern[], int toCut[])
     // cuts an array pattern
@@ -381,12 +395,12 @@ public class Chmusick extends Chubgraph {
     public int[] arpegiate(int pattern[], int times)
     {
         int toReturn[pattern.size()*times];
-        
+
         48 => int octave;
         0 => int counter;
         0 => int auxC;
-        0 => int tempVar; 
-        
+        0 => int tempVar;
+
         for(0 => int i; i < pattern.size(); i++)
         {
             for(0 => int j; j < times; j++)
@@ -412,19 +426,20 @@ public class Chmusick extends Chubgraph {
         return toReturn;
     }
     public void grain(SndBuf buf, float duration , int position, float pitch, int randompos, float randpitch)
-    { 
+    {
         buf => Envelope e => outlet;
-        
+
         2 => e.gain;
         int samples;
         buf.samples() => samples;
         44100*position/1000 => position;
         44100*randompos/1000 => randompos;
-        
+
         duration*Std.rand2f(0.45,0.5)::ms => e.duration;
         float freq;
-        
+
         while(true){
+            samp => now;
             Std.rand2f(pitch-randpitch,pitch+randpitch) => buf.rate;
             Std.rand2(position-randompos,position+randompos) => buf.pos;
             e.keyOn();
@@ -438,6 +453,7 @@ public class Chmusick extends Chubgraph {
         buffer => Envelope envelope => outlet;
         while(true)
         {
+            samp => now;
             envelope.keyOn();
             0 => buffer.pos;
             buffer.samples()::samp => now;
@@ -450,6 +466,7 @@ public class Chmusick extends Chubgraph {
             (start*buffer.samples())$int => int Start;
             while(true)
             {
+                samp => now;
                 envelope.keyOn();
                 Start => buffer.pos;
                 (buffer.samples()-Start)::samp => now;
@@ -468,6 +485,7 @@ public class Chmusick extends Chubgraph {
             temp-Start => int End;
             while(true)
             {
+                samp => now;
                 envelope.keyOn();
                 Start => buffer.pos;
                 End::samp => now;
@@ -484,26 +502,58 @@ public class Chmusick extends Chubgraph {
         command | channel => command;
         byte1 & 0x7f  => msg.data2;
         byte2 & 0x7f => msg.data3;
-        return msg;  
+        return msg;
     }
-    
+    public void panic (int channel){
+        MidiMsg msg;
+          for(0 => int j; j < 126;j++){
+            144+channel => msg.data1;
+            j => msg.data2;
+            0 => msg.data3;
+        }
+    }
     public void play(MidiOut mout, int note[],int div, int channel)
     {
         while(true)
         {
             for(0 => int i; i < note.cap(); i++)
             {
-                if (note[i] != 0)
-                {
+              if (note[i] == 0)
+              {
+                panic(channel);
+                mout.send(msgMidi(0x9,channel,note[i],0));
+                Dur(STATIC.TEMPO,div) => now;
+              }
+              else{
+                    20::samp => now;
                     mout.send(msgMidi(0x9,channel,note[i],127));
-                    Dur(STATIC.TEMPO,div)/2 => now;
-                    mout.send(msgMidi(0x8,channel,note[i],0));
-                    Dur(STATIC.TEMPO,div)/2 => now;
+                    Dur(STATIC.TEMPO,div)*0.5 => now;
+                    panic(channel);
+                    mout.send(msgMidi(0x9,channel,note[i],0));
+                    Dur(STATIC.TEMPO,div)*0.5 => now;
                 }
+            }
+        }
+    }
+    public void play(MidiOut mout, int note[],int div, int channel, int velocity)
+    {
+        while(true)
+        {
+            for(0 => int i; i < note.cap(); i++)
+            {
                 if (note[i] == 0)
                 {
-                    mout.send(msgMidi(0x8,channel,note[i],0));
-                    Dur(STATIC.TEMPO,div) => now;
+                  panic(channel);
+                  mout.send(msgMidi(0x9,channel,note[i],0));
+                  Dur(STATIC.TEMPO,div) => now;
+                }
+                else {
+                    20::samp => now;
+                    mout.send(msgMidi(0x9,channel,note[i],velocity));
+                    Dur(STATIC.TEMPO,div)*0.5 => now;
+                    panic(channel);
+                    mout.send(msgMidi(0x9,channel,note[i],0));
+                    Dur(STATIC.TEMPO,div)*0.5 => now;
                 }
             }
         }
@@ -515,13 +565,16 @@ public class Chmusick extends Chubgraph {
             for(0 => int i; i < note.cap(); i++)
             {
                 if(note[i][0] != 0){
+                    20::samp => now;
                     mout.send(msgMidi(0x9,channel,Std.ftoi(note[i][0]),127));
                     Dur(STATIC.TEMPO,div) => now;
-                    mout.send(msgMidi(0x8,channel,Std.ftoi(note[i][0]),0));
+                    panic(channel);
+                    mout.send(msgMidi(0x9,channel,Std.ftoi(note[i][0]),0));
                     Dur(STATIC.TEMPO,div)/2 => now;
                 }
                 if(note[i][0] == 0){
-                    mout.send(msgMidi(0x8,channel,Std.ftoi(note[i][0]),0));
+                    panic(channel);
+                    mout.send(msgMidi(0x9,channel,Std.ftoi(note[i][0]),0));
                     Dur(STATIC.TEMPO,div) => now;
                 }
             }
@@ -538,17 +591,21 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] == 1)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         0 => buffer.pos;
-                        Dur(STATIC.TEMPO,Division) => now;
+                        Dur(STATIC.TEMPO,Division)*0.5 => now;
+                        envelope.keyOff();
+                        Dur(STATIC.TEMPO,Division)*0.5 => now;
                     }
-                    if (sample[i] == 0)
+                    else if (sample[i] == 0)
                     {
                         envelope.keyOff();
                         Dur(STATIC.TEMPO,Division) => now;
                     }
-                    if (sample[i] != 0 && sample[i] != 1)
+                    else if (sample[i] != 0 && sample[i] != 1)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         0 => buffer.pos;
                         Dur(STATIC.TEMPO,sample[i])*0.5 => now;
@@ -559,18 +616,28 @@ public class Chmusick extends Chubgraph {
             }
         }
         if(mode == 1){
+            //Buffer.oscOut.dest(hostname, 57101 ); //Hydra defaul port
             while(true)
             {
                 for(0 => int i; i < sample.cap(); i++)
                 {
                     if (sample[i] == 1)
                     {
+                        20::samp => now;
                         envelope.keyOn();
+                        //Buffer.oscOut.start( "/test");
+                        //Math.random2f(0.8,1) => Buffer.oscOut.add;
+                        //Buffer.oscOut.send();
                         0 => buffer.pos;
-                        Dur(STATIC.TEMPO/2,Division)/sample.cap() => now;
+                        Dur(STATIC.TEMPO/2,Division)/sample.cap()*0.5 => now;
+                        envelope.keyOff();
+                        Dur(STATIC.TEMPO/2,Division)/sample.cap()*0.5 => now;
                     }
                     else
                     {
+                        //Buffer.oscOut.start( "/test");
+                        //Math.random2f(0,0.2) => Buffer.oscOut.add;
+                        //Buffer.oscOut.send();
                         envelope.keyOff();
                         Dur(STATIC.TEMPO/2,Division)/sample.cap() => now;
                     }
@@ -585,6 +652,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         0 => buffer.pos;
                         Dur(STATIC.TEMPO,Division)/STATIC.MEASURE => now;
@@ -605,6 +673,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         0 => buffer.pos;
                         Dur(STATIC.TEMPO,Division)*STATIC.CYCLES/STATIC.MEASURE => now;
@@ -631,6 +700,7 @@ public class Chmusick extends Chubgraph {
             for(0 => int i; i < sample.cap(); i++)
             {
                 if(sample[i][0] != 0){
+                    20::samp => now;
                     buffer.pos(1);
                     Dur(STATIC.TEMPO,Division/2)*sample[i][1] => now;
                 }
@@ -651,6 +721,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] == 1)
                     {
+                        20::samp => now;
                         fm.gain(1);
                         fm.noteOn();
                         Std.mtof(sample[i]) => fm.freq;
@@ -674,6 +745,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         fm.noteOn();
                         Std.mtof(sample[i]) => fm.freq;
                         Dur(STATIC.TEMPO/2,Division)/sample.cap()/2 => now;
@@ -696,6 +768,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         fm.noteOn();
                         Std.mtof(sample[i]) => fm.freq;
                         Dur(STATIC.TEMPO,Division)/STATIC.MEASURE => now;
@@ -715,6 +788,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         fm.noteOn();
                         Std.mtof(sample[i]) => fm.freq;
                         Dur(STATIC.TEMPO,Division)*STATIC.CYCLES/STATIC.MEASURE => now;
@@ -731,7 +805,7 @@ public class Chmusick extends Chubgraph {
     public void play(FMSynth fm, int trigger[]){
         play(fm, trigger,0);
     }
-    
+
     public void play(FMSynth fm, float sample[][])
     {
         fm => outlet;
@@ -740,6 +814,7 @@ public class Chmusick extends Chubgraph {
             for(0 => int i; i < sample.cap(); i++)
             {
                 if(sample[i][0] != 0){
+                    20::samp => now;
                     fm.gain(1);
                     fm.noteOn();
                     Std.mtof(sample[i][0]) => fm.freq;
@@ -760,6 +835,7 @@ public class Chmusick extends Chubgraph {
             for(0 => int i; i < sample.cap(); i++)
             {
                 if(sample[i][0] != 0){
+                    20::samp => now;
                     fm.gain(1);
                     fm.noteOn();
                     Std.mtof(sample[i][0]) => fm.freq;
@@ -773,7 +849,7 @@ public class Chmusick extends Chubgraph {
             }
         }
     }
-    
+
     public void play(Osc osc, int sample[], int mode)
     {
         osc => ADSR env => outlet;
@@ -790,6 +866,7 @@ public class Chmusick extends Chubgraph {
                         env.keyOff();
                         Dur(STATIC.TEMPO,Division) => now;
                     } else {
+                        20::samp => now;
                         0.85 => osc.gain;
                         env.keyOn();
                         Std.mtof(sample[i]) => osc.freq;
@@ -807,6 +884,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         env.keyOn();
                         Std.mtof(sample[i]) => osc.freq;
                         Dur(STATIC.TEMPO/2,Division)/sample.cap()/2 => now;
@@ -829,6 +907,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         env.keyOn();
                         Std.mtof(sample[i]) => osc.freq;
                         Dur(STATIC.TEMPO,Division)/STATIC.MEASURE => now;
@@ -848,6 +927,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         env.keyOn();
                         Std.mtof(sample[i]) => osc.freq;
                         Dur(STATIC.TEMPO,Division)*STATIC.CYCLES/STATIC.MEASURE => now;
@@ -879,6 +959,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         1.0 => osc.noteOn;
                         Std.mtof(sample[i]) => osc.freq;
@@ -900,6 +981,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         1.0 => osc.noteOn;
                         Std.mtof(sample[i]) => osc.freq;
@@ -923,6 +1005,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         1.0 => osc.noteOn;
                         Std.mtof(sample[i]) => osc.freq;
@@ -946,6 +1029,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != 0)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         1.0 => osc.noteOn;
                         Std.mtof(sample[i]) => osc.freq;
@@ -975,6 +1059,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != "~")
                     {
+                        20::samp => now;
                         file(sample[i]) => buffer.read;
                         envelope.keyOn();
                         0 => buffer.pos;
@@ -998,6 +1083,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != "~")
                     {
+                        20::samp => now;
                         file(sample[i]) => buffer.read;
                         envelope.keyOn();
                         0 => buffer.pos;
@@ -1019,6 +1105,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != "~")
                     {
+                        20::samp => now;
                         file(sample[i]) => buffer.read;
                         envelope.keyOn();
                         0 => buffer.pos;
@@ -1042,6 +1129,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] != "~")
                     {
+                        20::samp => now;
                         file(sample[i]) => buffer.read;
                         envelope.keyOn();
                         0 => buffer.pos;
@@ -1071,6 +1159,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] == 1)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         0 => buffer.pos;
                         Dur(STATIC.TEMPO,Division) => now;
@@ -1104,6 +1193,7 @@ public class Chmusick extends Chubgraph {
                 {
                     if (sample[i] == 1)
                     {
+                        20::samp => now;
                         envelope.keyOn();
                         0 => buffer.pos;
                         Dur(STATIC.TEMPO,Division) => now;

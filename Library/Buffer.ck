@@ -16,7 +16,7 @@ public class Buffer extends Chubgraph{
     new SndBuf @=> static SndBuf @ d14;
     new SndBuf @=> static SndBuf @ d15;
     new SndBuf @=> static SndBuf @ d16;
-    new OscOut @=> static OscOut @ osc;
+    new OscOut @=> static OscOut @ oscOut;
     new OscIn @=> static OscIn @ oscIn;
     new OscMsg @=> static OscMsg @ msg;
     static int KICK[];
