@@ -439,7 +439,7 @@ public class Chmusick extends Chubgraph {
         float freq;
 
         while(true){
-            samp => now;
+            20::samp => now;
             Std.rand2f(pitch-randpitch,pitch+randpitch) => buf.rate;
             Std.rand2(position-randompos,position+randompos) => buf.pos;
             e.keyOn();
@@ -453,7 +453,7 @@ public class Chmusick extends Chubgraph {
         buffer => Envelope envelope => outlet;
         while(true)
         {
-            samp => now;
+            20::samp => now;
             envelope.keyOn();
             0 => buffer.pos;
             buffer.samples()::samp => now;
@@ -466,7 +466,7 @@ public class Chmusick extends Chubgraph {
             (start*buffer.samples())$int => int Start;
             while(true)
             {
-                samp => now;
+                20::samp => now;
                 envelope.keyOn();
                 Start => buffer.pos;
                 (buffer.samples()-Start)::samp => now;
@@ -485,7 +485,7 @@ public class Chmusick extends Chubgraph {
             temp-Start => int End;
             while(true)
             {
-                samp => now;
+                20::samp => now;
                 envelope.keyOn();
                 Start => buffer.pos;
                 End::samp => now;
